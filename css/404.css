@@ -1,0 +1,87 @@
+/* =========================
+   RESET
+   ========================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* =========================
+   VARIABLES (MISMA LÍNEA)
+   ========================= */
+:root {
+  --color-bg: #f4f6f8;
+  --color-card: #ffffff;
+  --color-primary: #3b82f6;
+  --color-text: #1f2933;
+  --color-muted: #6b7280;
+}
+
+/* =========================
+   BASE
+   ========================= */
+body {
+  font-family: Arial, sans-serif;
+  background-color: var(--color-bg);
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+/* =========================
+   CONTENEDOR
+   ========================= */
+.error-container {
+  padding: 2rem;
+  width: 100%;
+}
+
+.error-card {
+  background-color: var(--color-card);
+  max-width: 420px;
+  margin: auto;
+  padding: 3rem 2.5rem;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+}
+
+/* =========================
+   TEXTO
+   ========================= */
+.error-card h1 {
+  font-size: 4.5rem;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+}
+
+.error-card h2 {
+  font-size: 1.5rem;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+}
+
+.error-card p {
+  color: var(--color-muted);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+/* =========================
+   BOTÓN
+   ========================= */
+.btn {
+  display: inline-block;
+  padding: 0.7rem 1.4rem;
+  background-color: var(--color-primary);
+  color: white;
+  text-decoration: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: background 0.2s ease;
+}
+
+.btn:hover {
+  background-color: #2563eb;
+}

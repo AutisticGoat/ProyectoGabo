@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Seguimiento de Hábitos</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="layout">
+
+    <!-- MENÚ LATERAL -->
+    <aside class="sidebar">
+        <h2 class="logo">Hábitos</h2>
+        <nav>
+            <!-- data-view corresponde a archivos HTML -->
+            <a href="#" data-view="usuario" class="active">Usuario</a>
+            <a href="#" data-view="rutinas">Rutinas</a>
+            <a href="#" data-view="avisos">Avisos</a>
+            <a href="#" data-view="historial">Historial</a>
+            <a href="#" data-view="configuraciones">Configuraciones</a>
+            <!-- <a </a> -->
+        </nav>
+    </aside>
+
+    <!-- CONTENIDO DINÁMICO -->
+    <main class="content">
+        <section id="view-container">
+            <!-- Se cargan los HTML aquí -->
+        </section>
+    </main>
+
+</div>
+
+<script src="js/script.js"></script>
+</body>
+</html>

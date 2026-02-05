@@ -1,0 +1,80 @@
+/* Reset básico */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+/* Contenedor */
+.login-container {
+  background: white;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 380px;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+/* Campos */
+.field {
+  margin-bottom: 1.4rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+/* Error visual */
+input.invalid {
+  border-color: #e11d48;
+}
+
+.error {
+  color: #e11d48;
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+  min-height: 1em;
+}
+
+.global-error {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/* Botón */
+button {
+  width: 100%;
+  padding: 0.7rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2563eb;
+}

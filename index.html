@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login | Seguimiento de Hábitos</title>
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+
+  <main class="login-container">
+    <h1>Iniciar sesión</h1>
+
+    <form id="loginForm" novalidate>
+
+      <!-- Usuario -->
+      <div class="field">
+        <label for="username">Usuario</label>
+        <input type="text" id="username" required>
+        <small class="error"></small>
+      </div>
+
+      <!-- Contraseña -->
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" required>
+        <small class="error"></small>
+      </div>
+
+      <button type="submit">Entrar</button>
+
+      <!-- Error general -->
+      <p class="error global-error" id="globalError"></p>
+
+    </form>
+  </main>
+
+  <script src="js/login.js"></script>
+</body>
+</html>
