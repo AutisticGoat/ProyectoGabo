@@ -2,34 +2,46 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Seguimiento de Hábitos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel — Seguimiento de Hábitos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="app">
 
-<div class="layout">
+<div class="dashboard">
+    <!-- Barra superior -->
+    <header class="dashboard-header">
+        <div class="header-inner">
+            <h1 class="page-title" id="page-title">Panel</h1>
+        </div>
+    </header>
 
-    <!-- MENÚ LATERAL -->
-    <aside class="sidebar">
-        <h2 class="logo">Hábitos</h2>
-        <nav>
-            <!-- data-view corresponde a archivos HTML -->
-            <a href="#" data-view="usuario" class="active">Usuario</a>
-            <a href="#" data-view="rutinas">Rutinas</a>
-            <a href="#" data-view="avisos">Avisos</a>
-            <a href="#" data-view="historial">Historial</a>
-            <a href="#" data-view="configuraciones">Configuraciones</a>
-            <!-- <a </a> -->
+    <!-- Menú lateral -->
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon" aria-hidden="true">◇</span>
+            <span class="brand-text">Hábitos</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" data-view="usuario" data-title="Mi cuenta" class="nav-link active">Mi cuenta</a>
+            <a href="#" data-view="rutinas" data-title="Rutinas" class="nav-link">Rutinas</a>
+            <a href="#" data-view="avisos" data-title="Avisos" class="nav-link">Avisos</a>
+            <a href="#" data-view="historial" data-title="Historial" class="nav-link">Historial</a>
+            <a href="#" data-view="configuraciones" data-title="Configuración" class="nav-link">Configuración</a>
         </nav>
     </aside>
 
-    <!-- CONTENIDO DINÁMICO -->
-    <main class="content">
-        <section id="view-container">
-            <!-- Se cargan los HTML aquí -->
-        </section>
+    <!-- Área principal -->
+    <main class="dashboard-main">
+        <div class="main-inner">
+            <section id="view-container" class="view-container">
+                <!-- Contenido dinámico por vista -->
+            </section>
+        </div>
     </main>
-
 </div>
 
 <script src="js/script.js"></script>

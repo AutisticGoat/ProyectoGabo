@@ -1,34 +1,31 @@
 <section class="card">
     <h2>Resumen de hoy</h2>
-    <p>Has completado <strong>2 de 5</strong> rutinas</p>
+    <p id="resumen-hoy">Has completado <strong>0 de 0</strong> hábitos hoy.</p>
 </section>
 
 <section class="card">
     <h2>Rutinas activas</h2>
-
-    <div class="habit">
-        <div>
-            <strong>Beber agua</strong>
-            <div class="meta">Diario · 8 veces</div>
-        </div>
-        <button>Marcar</button>
-    </div>
-
-    <div class="habit">
-        <div>
-            <strong>Leer</strong>
-            <div class="meta">Lunes a Viernes</div>
-        </div>
-        <button>Marcar</button>
-    </div>
+    <label class="toggle-completados">
+        <input type="checkbox" id="ocultar-completados" name="ocultar-completados">
+        Ocultar hábitos ya completados hoy
+    </label>
+    <div id="lista-habitos"></div>
 </section>
 
-<section class="card">
+<section class="card card-nueva-rutina">
     <h2>Nueva rutina</h2>
-    <input type="text" placeholder="Nombre de la rutina"><br><br>
-    <select>
-        <option>Diaria</option>
-        <option>Semanal</option>
-    </select><br><br>
-    <button>Crear rutina</button>
+    <label>Nombre de la rutina
+        <input type="text" id="nueva-rutina-nombre" placeholder="Ej: Mañanas productivas">
+    </label>
+    <label>Primer hábito (opcional)
+        <input type="text" id="nuevo-habito-nombre" placeholder="Ej: Beber agua">
+    </label>
+    <label>Frecuencia
+        <select id="nueva-rutina-frecuencia">
+            <option value="diaria">Diaria</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensual">Mensual</option>
+        </select>
+    </label>
+    <button type="button" id="btn-crear-rutina">Crear rutina</button>
 </section>

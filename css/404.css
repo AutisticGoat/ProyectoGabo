@@ -1,87 +1,127 @@
-/* =========================
-   RESET
-   ========================= */
+/* ============================================
+   404 — Mismo lenguaje visual que dashboard
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-bg: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-border-light: #eef0f4;
+  --color-text: #1c2026;
+  --color-text-muted: #5f6773;
+  --color-primary: #0d9488;
+  --color-primary-hover: #0f766e;
+  --color-primary-light: #ccfbf1;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-btn: 0 2px 8px rgba(13, 148, 136, 0.35), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-btn-hover: 0 4px 14px rgba(13, 148, 136, 0.4), 0 2px 4px rgba(0, 0, 0, 0.08);
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-2xl: 1.5rem;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* =========================
-   VARIABLES (MISMA LÍNEA)
-   ========================= */
-:root {
-  --color-bg: #f4f6f8;
-  --color-card: #ffffff;
-  --color-primary: #3b82f6;
-  --color-text: #1f2933;
-  --color-muted: #6b7280;
-}
-
-/* =========================
-   BASE
-   ========================= */
 body {
-  font-family: Arial, sans-serif;
-  background-color: var(--color-bg);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
   min-height: 100vh;
   display: grid;
   place-items: center;
+  padding: var(--space-6);
 }
 
-/* =========================
-   CONTENEDOR
-   ========================= */
+/* ---------------------------------------- Contenedor */
 .error-container {
-  padding: 2rem;
   width: 100%;
+  padding: var(--space-4);
 }
 
 .error-card {
-  background-color: var(--color-card);
+  background: var(--color-surface);
   max-width: 420px;
-  margin: auto;
-  padding: 3rem 2.5rem;
-  border-radius: 12px;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(0, 0, 0, 0.02);
   text-align: center;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+  position: relative;
+  overflow: hidden;
 }
 
-/* =========================
-   TEXTO
-   ========================= */
+.error-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--color-primary) 0%, #14b8a6 100%);
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+/* ---------------------------------------- Texto */
 .error-card h1 {
-  font-size: 4.5rem;
+  font-size: 4rem;
+  font-weight: 700;
   color: var(--color-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
 
 .error-card h2 {
-  font-size: 1.5rem;
+  font-size: var(--text-lg);
+  font-weight: 600;
   color: var(--color-text);
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .error-card p {
-  color: var(--color-muted);
-  margin-bottom: 2rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-6);
   line-height: 1.5;
+  font-size: var(--text-base);
 }
 
-/* =========================
-   BOTÓN
-   ========================= */
-.btn {
+/* ---------------------------------------- Botón */
+.error-card .btn {
   display: inline-block;
-  padding: 0.7rem 1.4rem;
-  background-color: var(--color-primary);
-  color: white;
+  padding: var(--space-3) var(--space-5);
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: #fff;
   text-decoration: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: background 0.2s ease;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-family: var(--font-sans);
+  box-shadow: var(--shadow-btn);
+  transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
 }
 
-.btn:hover {
-  background-color: #2563eb;
+.error-card .btn:hover {
+  background: linear-gradient(180deg, #0f766e 0%, #115e59 100%);
+  box-shadow: var(--shadow-btn-hover);
+  transform: translateY(-1px);
+}
+
+.error-card .btn:active {
+  transform: translateY(0);
 }
