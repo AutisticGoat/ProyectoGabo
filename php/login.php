@@ -8,8 +8,13 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     exit;
 }
 
-$correo = trim($_POST["correo"] ?? $_POST["email"] ?? "");
+$correo   = trim($_POST["correo"] ?? $_POST["email"] ?? "");
 $password = $_POST["password"] ?? "";
+
+// ── Guardar zona horaria enviada por el navegador ──
+// Validar antes de guardar en sesión
+$tzRaw = $_POST["timezone"] ?? "UTC";
+$timezone = in_array($tzRaw, timezone_identifiers_list(), true) ? $tzRaw : "UTC";
 
 if ($correo === "" || $password === "") {
     header("Content-Type: application/json; charset=utf-8");
@@ -18,9 +23,10 @@ if ($correo === "" || $password === "") {
 }
 
 try {
-    $pdo = GetDataBaseConn();
+    $pdo  = GetDataBaseConn();
     $stmt = $pdo->prepare(
-        "SELECT id_usuario, nombre, correo, password_hash, estado FROM usuarios WHERE correo = ? LIMIT 1"
+        "SELECT id_usuario, nombre, correo, password_hash, estado, rol
+         FROM usuarios WHERE correo = ? LIMIT 1"
     );
     $stmt->execute([$correo]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -45,11 +51,16 @@ try {
 
     session_regenerate_id(true);
     $_SESSION["id_usuario"] = (int) $user["id_usuario"];
-    $_SESSION["nombre"] = $user["nombre"];
-    $_SESSION["correo"] = $user["correo"];
+    $_SESSION["nombre"]     = $user["nombre"];
+    $_SESSION["correo"]     = $user["correo"];
+    $_SESSION["rol"]        = $user["rol"];
+    $_SESSION["timezone"]   = $timezone; // ← zona horaria del usuario
+
+    $redirect = $user["rol"] === "administrador" ? "admin.html" : "dashboard.html";
 
     header("Content-Type: application/json; charset=utf-8");
-    echo json_encode(["ok" => true, "redirect" => "dashboard.html"]);
+    echo json_encode(["ok" => true, "redirect" => $redirect, "rol" => $user["rol"]]);
+
 } catch (PDOException $e) {
     header("Content-Type: application/json; charset=utf-8");
     http_response_code(500);

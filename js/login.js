@@ -1,5 +1,5 @@
-const form = document.getElementById("loginForm");
-const emailInput = document.getElementById("email");
+const form        = document.getElementById("loginForm");
+const emailInput  = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 const globalError = document.getElementById("globalError");
 
@@ -7,7 +7,6 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-
   clearErrors();
 
   let valid = true;
@@ -26,11 +25,13 @@ form.addEventListener("submit", async (e) => {
 
   try {
     const formData = new FormData(form);
-    const res = await fetch("php/login.php", {
-      method: "POST",
-      body: formData,
-      credentials: "include"
-    });
+
+    // Detectar zona horaria del navegador automáticamente
+    // Ej: "America/Hermosillo", "America/Merida", "America/Santiago"
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    formData.append("timezone", timezone);
+
+    const res  = await fetch("php/login.php", { method: "POST", body: formData, credentials: "include" });
     const data = await res.json();
 
     if (data.ok && data.redirect) {

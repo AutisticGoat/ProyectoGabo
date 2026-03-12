@@ -21,6 +21,33 @@ if (!container) {
 }
 
 // ============================
+// HELPERS DE FECHA
+// Estrategia: guardar siempre UTC en la BD,
+// convertir a hora local del usuario al mostrar.
+// Funciona para cualquier zona horaria sin config.
+// ============================
+
+// Convierte un Date a string UTC "YYYY-MM-DD HH:MM:SS" para guardar en BD
+function toUTCDateTimeStr(date) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())} ` +
+         `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
+}
+
+// Parsea "YYYY-MM-DD HH:MM:SS" de la BD (UTC) a Date local.
+// Añade "Z" para que el navegador lo interprete como UTC
+// y lo convierta automáticamente a la hora local del usuario.
+function parseDbDate(str) {
+  if (!str) return null;
+  return new Date(str.replace(' ', 'T') + 'Z');
+}
+
+// Mantener por compatibilidad con loadRutinas/loadHistorial
+function toLocalDateTimeStr(date) {
+  return toUTCDateTimeStr(date);
+}
+
+// ============================
 // FETCH CON CREDENCIALES Y 401
 // ============================
 async function apiFetch(url, options = {}) {
@@ -44,14 +71,13 @@ function loadView(viewName) {
   fetch(`views/${viewName}.html`, { credentials: 'include' })
     .then(res => res.text())
     .then(html => {
-      if (!html || !html.trim()) {
-        load404();
-        return;
-      }
+      if (!html || !html.trim()) { load404(); return; }
       container.innerHTML = html;
       const activeLink = document.querySelector('.sidebar-nav .nav-link.active');
       const pageTitleEl = document.getElementById('page-title');
-      if (pageTitleEl && activeLink && activeLink.dataset.title) pageTitleEl.textContent = activeLink.dataset.title;
+      if (pageTitleEl && activeLink && activeLink.dataset.title) {
+        pageTitleEl.textContent = activeLink.dataset.title;
+      }
       bindViewEvents(viewName);
       loadViewData(viewName);
     })
@@ -63,22 +89,11 @@ function loadView(viewName) {
 // ============================
 function loadViewData(viewName) {
   switch (viewName) {
-    case 'usuario':
-      loadUsuario();
-      loadConfiguracionForUsuario();
-      break;
-    case 'rutinas':
-      loadRutinas();
-      break;
-    case 'historial':
-      loadHistorial();
-      break;
-    case 'avisos':
-      loadAvisos();
-      break;
-    case 'configuraciones':
-      loadConfiguracion();
-      break;
+    case 'usuario':        loadUsuario(); loadConfiguracionForUsuario(); break;
+    case 'rutinas':        loadRutinas();       break;
+    case 'historial':      loadHistorial();     break;
+    case 'avisos':         loadAvisos();        break;
+    case 'configuraciones': loadConfiguracion(); break;
   }
 }
 
@@ -89,9 +104,9 @@ function loadUsuario() {
       if (data.ok && data.usuario) {
         const u = data.usuario;
         const elNombre = document.getElementById('perfil-nombre');
-        const elEmail = document.getElementById('perfil-email');
+        const elEmail  = document.getElementById('perfil-email');
         if (elNombre) elNombre.textContent = u.nombre || '—';
-        if (elEmail) elEmail.textContent = u.correo || '—';
+        if (elEmail)  elEmail.textContent  = u.correo || '—';
       }
     })
     .catch(() => {});
@@ -106,84 +121,143 @@ function loadConfiguracionForUsuario() {
         const chk = document.getElementById('pref-notificaciones');
         const sel = document.getElementById('pref-tema');
         if (chk) chk.checked = !!c.notificaciones;
-        if (sel) sel.value = c.tema || 'claro';
+        if (sel) sel.value   = c.tema || 'claro';
       }
     })
     .catch(() => {});
 }
 
-let lastRutinasHabitos = [];
+let lastRutinas        = [];
 let lastCompletadosHoySet = new Set();
+let filtroActivo       = 'activa';
 
-function renderListaHabitos(habitos, completadosSet, ocultarCompletados) {
-  const lista = document.getElementById('lista-habitos');
-  if (!lista) return;
-  const aMostrar = ocultarCompletados
-    ? habitos.filter(h => !completadosSet.has(h.id_habito))
-    : habitos;
-  lista.innerHTML = '';
-  aMostrar.forEach(h => {
-    const div = document.createElement('div');
-    div.className = 'habit' + (completadosSet.has(h.id_habito) ? ' habit-completado' : '');
-    div.dataset.idHabito = h.id_habito;
-    const freq = h.frecuencia || 'diaria';
-    const yaCompletado = completadosSet.has(h.id_habito);
-    div.innerHTML = `
-      <div>
-        <strong>${escapeHtml(h.nombre)}</strong>
-        <div class="meta">${freq}${yaCompletado ? ' · Completado hoy' : ''}</div>
+function renderRutinas() {
+  const cont       = document.getElementById('lista-rutinas');
+  const chkOcultar = document.getElementById('ocultar-completados');
+  const ocultar    = chkOcultar ? chkOcultar.checked : false;
+  if (!cont) return;
+
+  const rutinas = filtroActivo === 'todas'
+    ? lastRutinas
+    : lastRutinas.filter(r => r.estado === filtroActivo);
+
+  if (rutinas.length === 0) {
+    cont.innerHTML = `<div class="rutinas-vacio">No hay rutinas ${filtroActivo === 'todas' ? '' : filtroActivo + 's'}.</div>`;
+    return;
+  }
+
+  cont.innerHTML = '';
+  rutinas.forEach(r => {
+    const habitos   = r.habitos || [];
+    const activos   = habitos.filter(h => !lastCompletadosHoySet.has(h.id_habito));
+    const completados = habitos.length - activos.length;
+
+    const card = document.createElement('div');
+    card.className = `rutina-card estado-${r.estado}`;
+    card.dataset.idRutina = r.id_rutina;
+
+    const esPausada    = r.estado === 'pausada';
+    const esFinalizada = r.estado === 'finalizada';
+
+    card.innerHTML = `
+      <div class="rutina-card-header">
+        <div class="rutina-info">
+          <span class="rutina-nombre">${escapeHtml(r.nombre)}</span>
+          <span class="badge-estado badge-${r.estado}">${r.estado}</span>
+        </div>
+        <div class="rutina-acciones" onclick="event.stopPropagation()">
+          ${!esFinalizada ? `
+            <button type="button" class="${esPausada ? 'btn-activar' : 'btn-pausar'}"
+              data-action="${esPausada ? 'activar' : 'pausar'}" data-id="${r.id_rutina}">
+              ${esPausada ? 'Activar' : 'Pausar'}
+            </button>
+          ` : `
+            <button type="button" class="btn-activar"
+              data-action="activar" data-id="${r.id_rutina}">Reactivar</button>
+          `}
+          <button type="button" class="btn-eliminar"
+            data-action="eliminar" data-id="${r.id_rutina}">Eliminar</button>
+        </div>
+        <span class="rutina-chevron">▼</span>
       </div>
-      <button type="button" class="btn-marcar" data-id-habito="${h.id_habito}" ${yaCompletado ? ' disabled' : ''}>${yaCompletado ? 'Hecho' : 'Marcar'}</button>
+      <div class="rutina-card-body">
+        <div class="rutina-habitos-titulo">
+          Hábitos · ${completados}/${habitos.length} completados hoy
+        </div>
+        <div class="rutina-habitos-lista">
+          ${habitos.length === 0
+            ? '<p style="font-size:.8rem;color:#94a3b8;">Sin hábitos en esta rutina.</p>'
+            : habitos.filter(h => ocultar ? !lastCompletadosHoySet.has(h.id_habito) : true).map(h => {
+                const hecho = lastCompletadosHoySet.has(h.id_habito);
+                return `<div class="habit${hecho ? ' habit-completado' : ''}" data-id-habito="${h.id_habito}">
+                  <div>
+                    <strong>${escapeHtml(h.nombre)}</strong>
+                    <div class="meta">${h.frecuencia || 'diaria'}${hecho ? ' · Completado hoy' : ''}</div>
+                  </div>
+                  <button type="button" class="btn-marcar" data-id-habito="${h.id_habito}"
+                    ${hecho ? 'disabled' : ''}>${hecho ? 'Hecho' : 'Marcar'}</button>
+                </div>`;
+              }).join('')
+          }
+        </div>
+      </div>
     `;
-    lista.appendChild(div);
+
+    // Toggle expandir/colapsar
+    card.querySelector('.rutina-card-header').addEventListener('click', () => {
+      card.classList.toggle('abierta');
+    });
+
+    cont.appendChild(card);
   });
 }
 
 function loadRutinas() {
-  const hoy = new Date().toISOString().slice(0, 10);
-  const lista = document.getElementById('lista-habitos');
+  const hoy     = toLocalDateTimeStr(new Date()).slice(0, 10);
   const resumen = document.getElementById('resumen-hoy');
-  const chkOcultar = document.getElementById('ocultar-completados');
 
   apiFetch(`${API_BASE}/rutinas.php`)
     .then(res => res.json())
     .then(data => {
       if (!data.ok) return;
-      const rutinas = data.rutinas || [];
+      lastRutinas = data.rutinas || [];
       const habitosActivos = [];
-      rutinas.filter(r => r.estado === 'activa').forEach(r => {
-        (r.habitos || []).forEach(h => {
-          habitosActivos.push({ ...h, id_rutina: r.id_rutina });
-        });
+      lastRutinas.filter(r => r.estado === 'activa').forEach(r => {
+        (r.habitos || []).forEach(h => habitosActivos.push(h));
       });
 
       return apiFetch(`${API_BASE}/cumplimiento.php?desde=${hoy}&hasta=${hoy}`)
         .then(r => r.json())
         .then(cumplData => {
-          const completadosSet = new Set();
+          lastCompletadosHoySet = new Set();
           if (cumplData.ok && cumplData.cumplimiento) {
-            cumplData.cumplimiento.forEach(c => {
-              if (c.completado) completadosSet.add(c.id_habito);
-            });
+            cumplData.cumplimiento.forEach(c => { if (c.completado) lastCompletadosHoySet.add(c.id_habito); });
           }
-          lastRutinasHabitos = habitosActivos;
-          lastCompletadosHoySet = completadosSet;
-          const totalHabitos = habitosActivos.length;
-          const completadosHoy = completadosSet.size;
           if (resumen) {
-            resumen.innerHTML = `Has completado <strong>${completadosHoy} de ${totalHabitos}</strong> hábitos hoy.`;
+            resumen.innerHTML = `Has completado <strong>${lastCompletadosHoySet.size} de ${habitosActivos.length}</strong> hábitos hoy.`;
           }
-          const ocultar = chkOcultar ? chkOcultar.checked : false;
-          renderListaHabitos(habitosActivos, completadosSet, ocultar);
+          renderRutinas();
         });
     })
-    .then(() => {
-      if (chkOcultar) {
-        chkOcultar.onchange = () => {
-          renderListaHabitos(lastRutinasHabitos, lastCompletadosHoySet, chkOcultar.checked);
-        };
-      }
-    })
+    .catch(() => {});
+}
+
+function cambiarEstadoRutina(idRutina, nuevoEstado) {
+  apiFetch(`${API_BASE}/rutinas.php`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id_rutina: idRutina, estado: nuevoEstado }),
+  })
+    .then(r => r.json())
+    .then(data => { if (data.ok) loadRutinas(); })
+    .catch(() => {});
+}
+
+function eliminarRutina(idRutina) {
+  if (!confirm('¿Eliminar esta rutina y todos sus hábitos? Esta acción no se puede deshacer.')) return;
+  apiFetch(`${API_BASE}/rutinas.php?id_rutina=${idRutina}`, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(data => { if (data.ok) loadRutinas(); })
     .catch(() => {});
 }
 
@@ -191,8 +265,8 @@ function loadHistorial() {
   const hasta = new Date();
   const desde = new Date();
   desde.setDate(desde.getDate() - 7);
-  const desdeStr = desde.toISOString().slice(0, 10);
-  const hastaStr = hasta.toISOString().slice(0, 10);
+  const desdeStr = toLocalDateTimeStr(desde).slice(0, 10);
+  const hastaStr = toLocalDateTimeStr(hasta).slice(0, 10);
 
   apiFetch(`${API_BASE}/cumplimiento.php?desde=${desdeStr}&hasta=${hastaStr}`)
     .then(res => res.json())
@@ -211,7 +285,7 @@ function loadHistorial() {
       if (vacio) vacio.style.display = 'none';
       const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
       data.cumplimiento.forEach(row => {
-        const tr = document.createElement('tr');
+        const tr      = document.createElement('tr');
         const dayName = dias[new Date(row.fecha + 'T12:00:00').getDay()];
         tr.innerHTML = `
           <td>${escapeHtml(row.fecha)}</td>
@@ -239,48 +313,113 @@ function loadAvisos() {
       }
       data.avisos.forEach(a => {
         const div = document.createElement('div');
-        let cl = 'feedback neutral';
-        if (a.tipo === 'personalizado') cl = 'feedback positive';
-        div.className = cl;
-        const fecha = a.fecha_programada ? new Date(a.fecha_programada).toLocaleString('es') : '';
-        div.innerHTML = `<span class="aviso-mensaje">${escapeHtml(a.mensaje || '')}</span>${fecha ? `<span class="aviso-fecha">${escapeHtml(fecha)}</span>` : ''}`;
+        div.className = a.tipo === 'personalizado' ? 'feedback positive' : 'feedback neutral';
+
+        // parseDbDate interpreta el string de la BD como UTC y lo convierte a hora local
+        const fechaObj = parseDbDate(a.fecha_programada);
+        const fecha    = fechaObj ? fechaObj.toLocaleString('es') : '';
+
+        div.innerHTML = `
+          <span class="aviso-mensaje">${escapeHtml(a.mensaje || '')}</span>
+          ${fecha ? `<span class="aviso-fecha">${escapeHtml(fecha)}</span>` : ''}
+        `;
         cont.appendChild(div);
       });
     })
     .catch(() => {});
 }
 
+// ============================
+// TEMPORIZADOR
+// ============================
+const CIRCUMFERENCE = 213.6; // 2π × r(34)
+
+function updateTimerUI(suffix, remaining, total, paused) {
+  const digits = document.getElementById(`timer-digits-${suffix}`);
+  const ring   = document.getElementById(`timer-ring-fill-${suffix}`);
+  if (!digits || !ring) return;
+  digits.textContent = TimerManager.format(remaining);
+  const progress = total > 0 ? remaining / total : 0;
+  ring.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+  ring.classList.toggle('timer-paused', !!paused);
+  ring.classList.toggle('timer-urgent', !paused && remaining <= 30);
+}
+
+function showTimerDisplay(suffix, label) {
+  const setup   = document.getElementById(`timer-setup-${suffix}`);
+  const display = document.getElementById(`timer-display-${suffix}`);
+  const lbl     = document.getElementById(`timer-label-${suffix}`);
+  if (setup)   setup.style.display   = 'none';
+  if (display) display.style.display = '';
+  if (lbl)     lbl.textContent       = label || '';
+}
+
+function showTimerSetup(suffix) {
+  const setup   = document.getElementById(`timer-setup-${suffix}`);
+  const display = document.getElementById(`timer-display-${suffix}`);
+  if (setup)   setup.style.display   = '';
+  if (display) display.style.display = 'none';
+}
+
+function restoreTimerIfActive(suffix) {
+  const t = TimerManager.get(suffix);
+  if (!t) return;
+  showTimerDisplay(suffix, t.label);
+  updateTimerUI(suffix, t.remaining, t.total, t.paused);
+  t.onTick   = (rem, tot) => updateTimerUI(suffix, rem, tot, t.paused);
+  t.onFinish = () => { showTimerSetup(suffix); loadViewData(suffix === 'avisos' ? 'avisos' : 'rutinas'); };
+  bindTimerButtons(suffix);
+}
+
+function bindTimerButtons(suffix) {
+  const btnPause  = document.getElementById(`btn-timer-pause-${suffix}`);
+  const btnCancel = document.getElementById(`btn-timer-cancel-${suffix}`);
+  if (btnPause) {
+    btnPause.onclick = () => {
+      const paused = TimerManager.togglePause(suffix);
+      btnPause.textContent = paused ? 'Reanudar' : 'Pausar';
+      const t = TimerManager.get(suffix);
+      if (t) updateTimerUI(suffix, t.remaining, t.total, paused);
+    };
+  }
+  if (btnCancel) {
+    btnCancel.onclick = () => { TimerManager.stop(suffix); showTimerSetup(suffix); };
+  }
+}
+
+function startTimer(suffix, label, minutes, onFinishCallback) {
+  showTimerDisplay(suffix, label);
+  TimerManager.start({
+    id: suffix, label, minutes,
+    onTick:   (rem, tot) => { const t = TimerManager.get(suffix); updateTimerUI(suffix, rem, tot, t ? t.paused : false); },
+    onFinish: () => { showTimerSetup(suffix); if (onFinishCallback) onFinishCallback(); },
+  });
+  bindTimerButtons(suffix);
+}
+
 function programarTemporizador(e) {
   e.preventDefault();
-  const msg = document.getElementById('aviso-mensaje');
-  const mins = document.getElementById('aviso-minutos');
+  const msg     = document.getElementById('aviso-mensaje');
+  const mins    = document.getElementById('aviso-minutos');
   const mensaje = (msg && msg.value.trim()) || '';
-  const minutos = Math.max(1, parseInt(mins && mins.value ? mins.value : 30, 10) || 30);
-  if (!mensaje) {
-    alert('Escribe el mensaje del recordatorio.');
-    return;
-  }
-  const fechaProgramada = new Date(Date.now() + minutos * 60 * 1000);
-  const fechaStr = fechaProgramada.toISOString().slice(0, 19).replace('T', ' ');
+  const minutos = Math.max(1, parseInt(mins?.value || '5', 10) || 5);
+
+  if (!mensaje) { alert('Escribe el mensaje del recordatorio.'); return; }
+
+  // Guardar en UTC — el navegador convierte a local al mostrar
+  const fechaStr = toUTCDateTimeStr(new Date(Date.now() + minutos * 60 * 1000));
+
   apiFetch(`${API_BASE}/avisos.php`, {
-    method: 'POST',
+    method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      mensaje: mensaje + ' (en ' + minutos + ' min)',
-      tipo: 'personalizado',
-      fecha_programada: fechaStr
-    })
+    body:    JSON.stringify({ mensaje: `${mensaje} (en ${minutos} min)`, tipo: 'personalizado', fecha_programada: fechaStr }),
   })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
-      if (data.ok) {
-        if (msg) msg.value = '';
-        if (mins) mins.value = '30';
-        loadViewData('avisos');
-        alert('Recordatorio programado para dentro de ' + minutos + ' minutos. Revisa la lista de avisos.');
-      } else {
-        alert(data.error || 'No se pudo programar.');
-      }
+      if (!data.ok) { alert(data.error || 'No se pudo guardar.'); return; }
+      if (msg)  msg.value  = '';
+      if (mins) mins.value = '5';
+      startTimer('avisos', mensaje, minutos, () => loadViewData('avisos'));
     })
     .catch(() => alert('Error al programar el recordatorio.'));
 }
@@ -290,11 +429,11 @@ function loadConfiguracion() {
     .then(res => res.json())
     .then(data => {
       if (!data.ok || !data.configuracion) return;
-      const c = data.configuracion;
+      const c   = data.configuracion;
       const chk = document.getElementById('config-notificaciones');
       const sel = document.getElementById('config-tema');
       if (chk) chk.checked = !!c.notificaciones;
-      if (sel) sel.value = c.tema || 'claro';
+      if (sel) sel.value   = c.tema || 'claro';
     })
     .catch(() => {});
 }
@@ -311,16 +450,69 @@ function bindViewEvents(viewName) {
         const btnPrefs = document.getElementById('btn-guardar-prefs');
         if (btnPrefs) btnPrefs.addEventListener('click', guardarPrefsUsuario);
         break;
+
       case 'rutinas':
         const btnCrear = document.getElementById('btn-crear-rutina');
         if (btnCrear) btnCrear.addEventListener('click', crearRutina);
+
+        // Filtros de estado
+        document.querySelectorAll('.btn-filtro').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filtroActivo = btn.dataset.filtro;
+            renderRutinas();
+          });
+        });
+
+        // Ocultar completados
+        const chkOcultar = document.getElementById('ocultar-completados');
+        if (chkOcultar) chkOcultar.onchange = () => renderRutinas();
+
+        // Delegación de acciones en tarjetas (pausar, activar, eliminar)
+        const listaRutinas = document.getElementById('lista-rutinas');
+        if (listaRutinas) {
+          listaRutinas.addEventListener('click', e => {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const id     = parseInt(btn.dataset.id, 10);
+            const action = btn.dataset.action;
+            if (action === 'pausar')   cambiarEstadoRutina(id, 'pausada');
+            if (action === 'activar')  cambiarEstadoRutina(id, 'activa');
+            if (action === 'eliminar') eliminarRutina(id);
+          });
+        }
+
+        // Presets de temporizador
+        document.querySelectorAll('.btn-preset').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const input = document.getElementById('rutina-timer-minutos');
+            if (input) input.value = btn.dataset.mins;
+            document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+          });
+        });
+
+        const btnIniciar = document.getElementById('btn-iniciar-rutina-timer');
+        if (btnIniciar) {
+          btnIniciar.addEventListener('click', () => {
+            const label = document.getElementById('rutina-timer-label')?.value.trim() || 'Sesión de enfoque';
+            const minsV = Math.max(1, parseInt(document.getElementById('rutina-timer-minutos')?.value || '25', 10) || 25);
+            startTimer('rutinas', label, minsV, null);
+          });
+        }
+        restoreTimerIfActive('rutinas');
         break;
+
       case 'historial':
         break;
+
       case 'avisos':
         const formTemp = document.getElementById('form-temporizador');
         if (formTemp) formTemp.addEventListener('submit', programarTemporizador);
+        restoreTimerIfActive('avisos');
         break;
+
       case 'configuraciones':
         const btnConfig = document.getElementById('btn-guardar-config');
         if (btnConfig) btnConfig.addEventListener('click', guardarConfiguracion);
@@ -330,52 +522,39 @@ function bindViewEvents(viewName) {
 }
 
 function guardarPrefsUsuario() {
-  const chk = document.getElementById('pref-notificaciones');
-  const sel = document.getElementById('pref-tema');
+  const chk  = document.getElementById('pref-notificaciones');
+  const sel  = document.getElementById('pref-tema');
   const notificaciones = chk ? chk.checked : true;
   const tema = sel ? sel.value : 'claro';
   apiFetch(`${API_BASE}/configuracion.php`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ notificaciones, tema })
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notificaciones, tema }),
   })
     .then(res => res.json())
-    .then(data => {
-      if (data.ok) {
-        applyTema(tema);
-        alert('Preferencias guardadas.');
-      }
-    })
+    .then(data => { if (data.ok) { applyTema(tema); alert('Preferencias guardadas.'); } })
     .catch(() => {});
 }
 
 function guardarConfiguracion() {
-  const chk = document.getElementById('config-notificaciones');
-  const sel = document.getElementById('config-tema');
+  const chk  = document.getElementById('config-notificaciones');
+  const sel  = document.getElementById('config-tema');
   const notificaciones = chk ? chk.checked : true;
   const tema = sel ? sel.value : 'claro';
   apiFetch(`${API_BASE}/configuracion.php`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ notificaciones, tema })
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notificaciones, tema }),
   })
     .then(res => res.json())
-    .then(data => {
-      if (data.ok) {
-        applyTema(tema);
-        alert('Configuración guardada.');
-      }
-    })
+    .then(data => { if (data.ok) { applyTema(tema); alert('Configuración guardada.'); } })
     .catch(() => {});
 }
 
 function marcarHabito(idHabito) {
   if (!idHabito) return;
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = toLocalDateTimeStr(new Date()).slice(0, 10);
   apiFetch(`${API_BASE}/cumplimiento.php`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_habito: parseInt(idHabito, 10), fecha: hoy, completado: true })
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id_habito: parseInt(idHabito, 10), fecha: hoy, completado: true }),
   })
     .then(res => res.json())
     .then(data => { if (data.ok) loadViewData('rutinas'); })
@@ -385,35 +564,25 @@ function marcarHabito(idHabito) {
 function crearRutina() {
   const nombreRutina = document.getElementById('nueva-rutina-nombre');
   const nombreHabito = document.getElementById('nuevo-habito-nombre');
-  const frecuencia = document.getElementById('nueva-rutina-frecuencia');
-  const nom = (nombreRutina && nombreRutina.value.trim()) || '';
-  if (!nom) {
-    alert('Escribe el nombre de la rutina.');
-    return;
-  }
-  const freq = (frecuencia && frecuencia.value) || 'diaria';
+  const frecuencia   = document.getElementById('nueva-rutina-frecuencia');
+  const nom          = (nombreRutina && nombreRutina.value.trim()) || '';
+  if (!nom) { alert('Escribe el nombre de la rutina.'); return; }
+  const freq      = (frecuencia && frecuencia.value) || 'diaria';
   const nomHabito = (nombreHabito && nombreHabito.value.trim()) || '';
 
   apiFetch(`${API_BASE}/rutinas.php`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nombre: nom, fecha_inicio: new Date().toISOString().slice(0, 10) })
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre: nom, fecha_inicio: toLocalDateTimeStr(new Date()).slice(0, 10) }),
   })
     .then(res => res.json())
     .then(data => {
-      if (!data.ok || !data.id_rutina) {
-        alert(data.error || 'Error al crear rutina.');
-        return;
-      }
-      const idRutina = data.id_rutina;
+      if (!data.ok || !data.id_rutina) { alert(data.error || 'Error al crear rutina.'); return; }
       if (nomHabito) {
         return apiFetch(`${API_BASE}/habitos.php`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_rutina: idRutina, nombre: nomHabito, frecuencia: freq })
-        }).then(r => r.json()).then(() => ({ ok: true }));
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_rutina: data.id_rutina, nombre: nomHabito, frecuencia: freq }),
+        }).then(r => r.json());
       }
-      return { ok: true };
     })
     .then(() => {
       if (nombreRutina) nombreRutina.value = '';
@@ -433,9 +602,7 @@ function escapeHtml(text) {
 // ============================
 // CARGA DE 404
 // ============================
-function load404() {
-  window.location.href = '404.html';
-}
+function load404() { window.location.href = '404.html'; }
 
 // ============================
 // DELEGACIÓN: BOTÓN MARCAR
@@ -453,7 +620,7 @@ if (container) {
 document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
   link.addEventListener('click', e => {
     e.preventDefault();
-    const view = link.dataset.view;
+    const view  = link.dataset.view;
     const title = link.dataset.title || view;
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
     link.classList.add('active');
@@ -479,15 +646,14 @@ function applyTema(tema) {
 function applyThemeFromServer() {
   return apiFetch(`${API_BASE}/configuracion.php`)
     .then(res => res.json())
-    .then(data => {
-      if (data.ok && data.configuracion && data.configuracion.tema) {
-        applyTema(data.configuracion.tema);
-      }
-    })
+    .then(data => { if (data.ok && data.configuracion?.tema) applyTema(data.configuracion.tema); })
     .catch(() => {});
 }
 
 // ============================
 // VISTA INICIAL
 // ============================
-applyThemeFromServer().then(() => loadView('usuario'));
+applyThemeFromServer().then(() => {
+  TimerManager.requestPermission();
+  loadView('usuario');
+});

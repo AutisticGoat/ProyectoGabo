@@ -16,7 +16,8 @@ CREATE TABLE usuarios (
     correo VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-    estado ENUM('activo', 'inactivo') DEFAULT 'activo'
+    estado ENUM('activo', 'inactivo') DEFAULT 'activo',
+    rol ENUM('usuario', 'administrador') NOT NULL DEFAULT 'usuario'
 );
 
 -- =========================================
@@ -99,6 +100,19 @@ CREATE TABLE configuracion (
     FOREIGN KEY (id_usuario)
         REFERENCES usuarios(id_usuario)
         ON DELETE CASCADE
+);
+
+-- =========================================
+-- TABLA: RECUPERACIÓN DE CONTRASEÑA
+-- =========================================
+CREATE TABLE IF NOT EXISTS password_resets (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    correo        VARCHAR(150)  NOT NULL,
+    codigo        CHAR(6)       NOT NULL,
+    expira_en     DATETIME      NOT NULL,
+    usado         BOOLEAN       DEFAULT FALSE,
+    creado_en     DATETIME      DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_correo (correo)
 );
 
 -- =========================================
