@@ -96,9 +96,6 @@ try {
     ";
     $mail->AltBody = "Tu código de recuperación es: {$codigo}. Expira en 15 minutos.";
 
-    $mail->SMTPDebug = 2;
-    $mail->Debugoutput = "error_log";
-
     $mail->send();
 
     echo json_encode(["ok" => true]);
