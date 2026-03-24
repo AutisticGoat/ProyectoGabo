@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
 </head>
 <body class="app">
 
@@ -32,6 +33,12 @@
             <a href="#" data-view="historial" data-title="Historial" class="nav-link">Historial</a>
             <a href="#" data-view="configuraciones" data-title="Configuración" class="nav-link">Configuración</a>
         </nav>
+        <div class="sidebar-footer" id="sidebar-footer-dash">
+            <!-- visible solo para admin/superadmin via JS -->
+            <a href="admin.html" id="link-panel-admin" class="nav-link-admin" style="display:none;">
+                &#9881; Panel de administración
+            </a>
+        </div>
     </aside>
 
     <!-- Área principal -->

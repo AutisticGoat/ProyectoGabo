@@ -110,6 +110,17 @@ function loadUsuario() {
       }
     })
     .catch(() => {});
+
+  // Mostrar enlace al panel de admin si nivel_rol <= 2
+  apiFetch(`${API_BASE}/auth_info.php`)
+    .then(res => res.json())
+    .then(data => {
+      const link = document.getElementById('link-panel-admin');
+      if (link && data.ok && data.nivel_rol <= 2) {
+        link.style.display = '';
+      }
+    })
+    .catch(() => {});
 }
 
 function loadConfiguracionForUsuario() {

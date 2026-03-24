@@ -1,0 +1,197 @@
+/* =====================================================
+   admin.css — Panel de administración
+   ===================================================== */
+
+/* ── Stats grid ──────────────────────────────────── */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+}
+.stat-card {
+    background: var(--color-bg, #f8fafc);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    border: 1.5px solid var(--color-border, #e2e8f0);
+}
+.stat-card__value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--color-primary, #0d9488);
+}
+.stat-card__label {
+    font-size: .75rem;
+    color: var(--color-text-muted, #64748b);
+    margin-top: .25rem;
+    font-weight: 600;
+}
+
+/* ── Buscador ────────────────────────────────────── */
+.search-bar {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: .75rem;
+    flex-wrap: wrap;
+}
+.search-bar input { flex: 1; min-width: 180px; }
+
+/* ── Tabla de usuarios ───────────────────────────── */
+.table-wrapper { overflow-x: auto; }
+
+.tabla-usuarios {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+}
+.tabla-usuarios th {
+    background: #f8fafc;
+    padding: .6rem .75rem;
+    text-align: left;
+    font-size: .72rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-bottom: 1.5px solid #e2e8f0;
+}
+.tabla-usuarios td {
+    padding: .6rem .75rem;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+/* ── Badges de estado y rol ──────────────────────── */
+.badge {
+    display: inline-block;
+    padding: .15rem .55rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+.badge-activo      { background: #d1fae5; color: #065f46; }
+.badge-inactivo    { background: #fef3c7; color: #92400e; }
+.badge-superadmin  { background: #ede9fe; color: #5b21b6; }
+.badge-admin       { background: #dbeafe; color: #1e40af; }
+.badge-editor      { background: #fef3c7; color: #92400e; }
+.badge-usuario,
+.badge-cliente     { background: #f1f5f9; color: #475569; }
+
+/* ── Botones de acción en tabla ──────────────────── */
+.actions { display: flex; gap: .35rem; flex-wrap: wrap; }
+
+.btn-sm {
+    padding: .2rem .6rem;
+    font-size: .72rem;
+    font-weight: 600;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: opacity .2s;
+    background: #d1fae5;
+    color: #065f46;
+}
+.btn-sm:hover { opacity: .8; }
+.btn-warning  { background: #fef3c7 !important; color: #92400e !important; }
+.btn-danger   { background: #fee2e2 !important; color: #991b1b !important; }
+.btn-neutral  { background: #f1f5f9 !important; color: #334155 !important; border: 1px solid #cbd5e1 !important; }
+
+/* ── Selector de rol ─────────────────────────────── */
+.select-rol-usuario {
+    padding: .2rem .4rem;
+    font-size: .75rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    font-family: inherit;
+    color: #334155;
+    cursor: pointer;
+    max-width: 120px;
+}
+.select-rol-usuario:focus { border-color: #0d9488; outline: none; }
+
+/* ── Toast ───────────────────────────────────────── */
+#admin-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #0d9488;
+    color: #fff;
+    padding: .65rem 1.5rem;
+    border-radius: 12px;
+    font-size: .875rem;
+    font-weight: 600;
+    box-shadow: 0 4px 20px rgba(0,0,0,.15);
+    opacity: 0;
+    transition: opacity .3s, transform .3s;
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+}
+#admin-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+#admin-toast.toast-error { background: #dc2626; }
+
+/* ── Sidebar footer ──────────────────────────────── */
+.sidebar-footer {
+    margin-top: auto;
+    padding: 1rem .75rem .75rem;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+    display: flex;
+    flex-direction: column;
+    gap: .4rem;
+}
+
+.nav-link-admin {
+    display: block;
+    padding: .55rem .85rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    color: #5b21b6 !important;
+    font-weight: 700;
+    font-size: .82rem;
+    border: 1.5px solid #c4b5fd;
+    text-decoration: none;
+    transition: background .2s;
+}
+.nav-link-admin:hover { background: linear-gradient(135deg, #ddd6fe, #c4b5fd); }
+
+.nav-link-dashboard {
+    display: block;
+    padding: .55rem .85rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    color: #166534 !important;
+    font-weight: 700;
+    font-size: .82rem;
+    border: 1.5px solid #bbf7d0;
+    text-decoration: none;
+    transition: background .2s;
+}
+.nav-link-dashboard:hover { background: linear-gradient(135deg, #dcfce7, #bbf7d0); }
+
+.nav-link-secondary {
+    display: block;
+    padding: .55rem .85rem;
+    border-radius: 10px;
+    color: var(--color-text-muted, #64748b) !important;
+    font-size: .82rem;
+    text-decoration: none;
+    transition: background .2s;
+}
+.nav-link-secondary:hover { background: #f1f5f9; }
+
+.nav-link-danger {
+    display: block;
+    padding: .55rem .85rem;
+    border-radius: 10px;
+    color: #dc2626 !important;
+    font-weight: 600;
+    font-size: .82rem;
+    text-decoration: none;
+    transition: background .2s;
+}
+.nav-link-danger:hover { background: #fee2e2; }

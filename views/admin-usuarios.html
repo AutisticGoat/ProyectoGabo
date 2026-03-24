@@ -1,6 +1,6 @@
 <section class="card">
     <h2>Gestión de usuarios</h2>
-    <p class="subtitle">Busca, activa/desactiva, cambia rol o elimina cuentas.</p>
+    <p class="subtitle">Busca, activa/desactiva, asigna roles o elimina cuentas.</p>
 
     <div class="search-bar">
         <input type="text" id="buscar-usuario"
@@ -18,13 +18,14 @@
                     <th>Nombre</th>
                     <th>Correo</th>
                     <th>Estado</th>
-                    <th>Rol</th>
+                    <th>Rol actual</th>
+                    <th>Asignar rol</th>
                     <th>Registro</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody id="cuerpo-usuarios">
-                <tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);">Cargando…</td></tr>
+                <tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);">Cargando…</td></tr>
             </tbody>
         </table>
     </div>

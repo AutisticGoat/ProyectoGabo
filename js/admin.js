@@ -1,11 +1,9 @@
 // ============================
 // PANEL ADMINISTRADOR
-// Vistas: admin-estadisticas, admin-usuarios
 // ============================
 
 const VALID_ADMIN_VIEWS = ["admin-estadisticas", "admin-usuarios"];
 const API = "php";
-
 const container = document.getElementById("view-container");
 
 // ── Fetch con manejo de 401 / 403 ─────────────────
@@ -31,7 +29,6 @@ function showToast(msg, tipo = "ok") {
     toast._t = setTimeout(() => { toast.className = ""; }, 3000);
 }
 
-// ── Escape HTML ────────────────────────────────────
 function esc(t) {
     const d = document.createElement("div");
     d.textContent = t ?? "";
@@ -41,7 +38,6 @@ function esc(t) {
 // ── Carga de vistas ────────────────────────────────
 function loadView(viewName) {
     if (!VALID_ADMIN_VIEWS.includes(viewName)) return;
-
     fetch(`views/${viewName}.html`, { credentials: "include" })
         .then(r => r.text())
         .then(html => {
@@ -86,6 +82,7 @@ function set(id, val) {
 // USUARIOS
 // ══════════════════════════════════════════════════
 let todosLosUsuarios = [];
+let rolesDisponibles = [];
 
 function loadUsuarios(filtro = "") {
     apiFetch(`${API}/admin.php`)
@@ -93,10 +90,11 @@ function loadUsuarios(filtro = "") {
         .then(data => {
             if (!data.ok) return;
             todosLosUsuarios = data.usuarios || [];
+            rolesDisponibles  = data.roles    || [];
             renderUsuarios(filtro);
             bindUsuariosEvents();
         })
-        .catch(() => {});
+        .catch(err => showToast(err.message || "Error al cargar usuarios.", "error"));
 }
 
 function renderUsuarios(filtro = "") {
@@ -111,46 +109,39 @@ function renderUsuarios(filtro = "") {
         : todosLosUsuarios;
 
     if (lista.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);">
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);">
             ${q ? "No se encontraron usuarios." : "No hay usuarios."}</td></tr>`;
         return;
     }
+
+    // Colores por nivel de rol
+    const coloresRol = { 1: "badge-superadmin", 2: "badge-admin", 3: "badge-editor", 4: "badge-cliente" };
 
     tbody.innerHTML = lista.map(u => {
         const estadoBadge = u.estado === "activo"
             ? `<span class="badge badge-activo">Activo</span>`
             : `<span class="badge badge-inactivo">Inactivo</span>`;
 
-        const rolBadge = u.rol === "administrador"
-            ? `<span class="badge badge-admin">Admin</span>`
-            : `<span class="badge badge-usuario">Usuario</span>`;
+        const rolBadge = `<span class="badge ${coloresRol[u.nivel_rol] || 'badge-cliente'}">${esc(u.nombre_rol)}</span>`;
 
         const fecha = u.fecha_creacion
-            ? new Date(u.fecha_creacion).toLocaleDateString("es")
+            ? new Date(u.fecha_creacion.replace(' ', 'T') + 'Z').toLocaleDateString("es")
             : "—";
 
-        // Botones de acción
         const btnEstado = u.estado === "activo"
             ? `<button class="btn-sm btn-warning"
-                       data-action="estado" data-id="${u.id_usuario}" data-valor="inactivo"
-                       title="Desactivar cuenta">Desactivar</button>`
-            : `<button class="btn-sm"
-                       data-action="estado" data-id="${u.id_usuario}" data-valor="activo"
-                       title="Activar cuenta">Activar</button>`;
+                       data-action="estado" data-id="${u.id_usuario}" data-valor="inactivo">Desactivar</button>`
+            : `<button class="btn-sm btn-neutral"
+                       data-action="estado" data-id="${u.id_usuario}" data-valor="activo">Activar</button>`;
 
-        const btnRol = u.rol === "administrador"
-            ? `<button class="btn-sm btn-neutral"
-                       data-action="rol" data-id="${u.id_usuario}" data-valor="usuario"
-                       title="Quitar rol admin">Quitar admin</button>`
-            : `<button class="btn-sm"
-                       data-action="rol" data-id="${u.id_usuario}" data-valor="administrador"
-                       title="Hacer administrador">Hacer admin</button>`;
+        // Selector de rol dinámico
+        const opcionesRol = rolesDisponibles.map(r =>
+            `<option value="${r.id_rol}" ${r.id_rol == u.id_rol ? "selected" : ""}>${esc(r.nombre)}</option>`
+        ).join("");
+        const selectRol = `<select class="select-rol-usuario" data-action="rol" data-id="${u.id_usuario}">${opcionesRol}</select>`;
 
-        const btnEliminar = u.rol !== "administrador"
-            ? `<button class="btn-sm btn-danger"
-                       data-action="eliminar" data-id="${u.id_usuario}" data-nombre="${esc(u.nombre)}"
-                       title="Eliminar cuenta">Eliminar</button>`
-            : "";
+        const btnEliminar = `<button class="btn-sm btn-danger"
+                       data-action="eliminar" data-id="${u.id_usuario}" data-nombre="${esc(u.nombre)}">Eliminar</button>`;
 
         return `
             <tr>
@@ -159,56 +150,47 @@ function renderUsuarios(filtro = "") {
                 <td>${esc(u.correo)}</td>
                 <td>${estadoBadge}</td>
                 <td>${rolBadge}</td>
+                <td>${selectRol}</td>
                 <td>${esc(fecha)}</td>
-                <td><div class="actions">${btnEstado}${btnRol}${btnEliminar}</div></td>
+                <td><div class="actions">${btnEstado}${btnEliminar}</div></td>
             </tr>`;
     }).join("");
 }
 
 function bindUsuariosEvents() {
-    // Búsqueda
-    const inputBuscar  = document.getElementById("buscar-usuario");
-    const btnBuscar    = document.getElementById("btn-buscar");
-    const btnVerTodos  = document.getElementById("btn-ver-todos");
-    const tbody        = document.getElementById("cuerpo-usuarios");
+    const inputBuscar = document.getElementById("buscar-usuario");
+    const btnBuscar   = document.getElementById("btn-buscar");
+    const btnVerTodos = document.getElementById("btn-ver-todos");
+    const tbody       = document.getElementById("cuerpo-usuarios");
 
-    if (btnBuscar) {
-        btnBuscar.addEventListener("click", () => {
-            renderUsuarios(inputBuscar?.value ?? "");
-        });
-    }
+    if (btnBuscar)   btnBuscar.addEventListener("click", () => renderUsuarios(inputBuscar?.value ?? ""));
+    if (inputBuscar) inputBuscar.addEventListener("keydown", e => { if (e.key === "Enter") renderUsuarios(inputBuscar.value); });
+    if (btnVerTodos) btnVerTodos.addEventListener("click", () => { if (inputBuscar) inputBuscar.value = ""; renderUsuarios(""); });
 
-    if (inputBuscar) {
-        inputBuscar.addEventListener("keydown", e => {
-            if (e.key === "Enter") renderUsuarios(inputBuscar.value);
-        });
-    }
-
-    if (btnVerTodos) {
-        btnVerTodos.addEventListener("click", () => {
-            if (inputBuscar) inputBuscar.value = "";
-            renderUsuarios("");
-        });
-    }
-
-    // Delegación de clics en la tabla
     if (tbody) {
+        // Clicks en botones
         tbody.addEventListener("click", e => {
             const btn = e.target.closest("[data-action]");
-            if (!btn) return;
-
+            if (!btn || btn.tagName === "SELECT") return;
             const { action, id, valor, nombre } = btn.dataset;
-
-            if (action === "estado") {
-                cambiarCampo(parseInt(id), { estado: valor });
-            }
-            if (action === "rol") {
-                cambiarCampo(parseInt(id), { rol: valor });
-            }
+            if (action === "estado")  cambiarCampo(parseInt(id), { estado: valor });
             if (action === "eliminar") {
-                if (confirm(`¿Eliminar la cuenta de "${nombre}"? Esta acción no se puede deshacer.`)) {
+                if (confirm(`¿Eliminar la cuenta de "${nombre}"? Esta acción no se puede deshacer.`))
                     eliminarUsuario(parseInt(id));
-                }
+            }
+        });
+
+        // Cambio de rol via select
+        tbody.addEventListener("change", e => {
+            const sel = e.target.closest(".select-rol-usuario");
+            if (!sel) return;
+            const id_usuario = parseInt(sel.dataset.id, 10);
+            const id_rol     = parseInt(sel.value, 10);
+            const rolNombre  = rolesDisponibles.find(r => r.id_rol == id_rol)?.nombre || "";
+            if (confirm(`¿Cambiar el rol a "${rolNombre}"? Se cerrarán todas sus sesiones activas.`)) {
+                cambiarCampo(id_usuario, { id_rol });
+            } else {
+                loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
             }
         });
     }
@@ -223,12 +205,11 @@ function cambiarCampo(id_usuario, payload) {
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                const msg = data.aviso || "Cambio guardado correctamente.";
-                showToast(msg, "ok");
-                loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
+                showToast(data.aviso || "Cambio guardado correctamente.", "ok");
             } else {
                 showToast(data.error || "Error al guardar.", "error");
             }
+            loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
         })
         .catch(err => showToast(err.message || "Error de conexión.", "error"));
 }
@@ -237,19 +218,14 @@ function eliminarUsuario(id_usuario) {
     apiFetch(`${API}/admin.php?id=${id_usuario}`, { method: "DELETE" })
         .then(r => r.json())
         .then(data => {
-            if (data.ok) {
-                showToast("Usuario eliminado.", "ok");
-                loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
-            } else {
-                showToast(data.error || "Error al eliminar.", "error");
-            }
+            if (data.ok) showToast("Usuario eliminado.", "ok");
+            else showToast(data.error || "Error al eliminar.", "error");
+            loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
         })
         .catch(() => showToast("Error de conexión.", "error"));
 }
 
-// ══════════════════════════════════════════════════
-// NAVEGACIÓN SIDEBAR
-// ══════════════════════════════════════════════════
+// ── Navegación sidebar ─────────────────────────────
 document.querySelectorAll(".sidebar-nav .nav-link[data-view]").forEach(link => {
     link.addEventListener("click", e => {
         e.preventDefault();
@@ -259,7 +235,4 @@ document.querySelectorAll(".sidebar-nav .nav-link[data-view]").forEach(link => {
     });
 });
 
-// ══════════════════════════════════════════════════
-// VISTA INICIAL
-// ══════════════════════════════════════════════════
 loadView("admin-estadisticas");
