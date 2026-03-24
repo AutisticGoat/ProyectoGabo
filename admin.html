@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel Admin — Seguimiento de Hábitos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="app">
+
+<div class="dashboard">
+    <!-- Barra superior -->
+    <header class="dashboard-header">
+        <div class="header-inner">
+            <h1 class="page-title" id="page-title">Estadísticas</h1>
+        </div>
+    </header>
+
+    <!-- Menú lateral -->
+    <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon" aria-hidden="true">◆</span>
+            <span class="brand-text">Admin</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" data-view="admin-estadisticas" data-title="Estadísticas" class="nav-link active">Estadísticas</a>
+            <a href="#" data-view="admin-usuarios"     data-title="Usuarios"      class="nav-link">Usuarios</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="dashboard.html" class="nav-link nav-link-secondary">← Volver al dashboard</a>
+            <a href="php/logout.php"  class="nav-link nav-link-danger">Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <!-- Área principal -->
+    <main class="dashboard-main">
+        <div class="main-inner main-inner--wide">
+            <section id="view-container" class="view-container"></section>
+        </div>
+    </main>
+</div>
+
+<script src="js/admin.js"></script>
+</body>
+</html>

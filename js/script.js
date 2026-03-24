@@ -110,17 +110,6 @@ function loadUsuario() {
       }
     })
     .catch(() => {});
-
-  // Mostrar enlace al panel de admin si el usuario tiene nivel ≤ 2
-  apiFetch(`${API_BASE}/auth_info.php`)
-    .then(res => res.json())
-    .then(data => {
-      const link = document.getElementById('link-panel-admin');
-      if (link && data.nivel_rol <= 2) {
-        link.style.display = '';
-      }
-    })
-    .catch(() => {});
 }
 
 function loadConfiguracionForUsuario() {
@@ -205,25 +194,11 @@ function renderRutinas() {
                     <strong>${escapeHtml(h.nombre)}</strong>
                     <div class="meta">${h.frecuencia || 'diaria'}${hecho ? ' · Completado hoy' : ''}</div>
                   </div>
-                  <div class="habit-acciones">
-                    <button type="button" class="btn-marcar" data-id-habito="${h.id_habito}"
-                      ${hecho ? 'disabled' : ''}>${hecho ? 'Hecho' : 'Marcar'}</button>
-                    <button type="button" class="btn-eliminar-habito" data-id-habito="${h.id_habito}"
-                      title="Eliminar hábito">✕</button>
-                  </div>
+                  <button type="button" class="btn-marcar" data-id-habito="${h.id_habito}"
+                    ${hecho ? 'disabled' : ''}>${hecho ? 'Hecho' : 'Marcar'}</button>
                 </div>`;
               }).join('')
           }
-        </div>
-        <div class="form-agregar-habito">
-          <input type="text" class="input-nuevo-habito" placeholder="Nuevo hábito..."
-            data-id-rutina="${r.id_rutina}">
-          <select class="select-frecuencia-habito">
-            <option value="diaria">Diaria</option>
-            <option value="semanal">Semanal</option>
-            <option value="mensual">Mensual</option>
-          </select>
-          <button type="button" class="btn-agregar-habito" data-id-rutina="${r.id_rutina}">+ Agregar</button>
         </div>
       </div>
     `;
@@ -235,38 +210,6 @@ function renderRutinas() {
 
     cont.appendChild(card);
   });
-}
-
-
-function loadSesiones() {
-  apiFetch(`${API_BASE}/sesiones.php`)
-    .then(r => r.json())
-    .then(data => {
-      const cont = document.getElementById('lista-sesiones');
-      if (!cont) return;
-      const sesiones = data.sesiones || [];
-      if (sesiones.length === 0) {
-        cont.innerHTML = '<p style="font-size:.85rem;color:#94a3b8;">No hay sesiones activas registradas.</p>';
-        return;
-      }
-      cont.innerHTML = sesiones.map(s => {
-        const fechaCreado  = parseDbDate(s.creado_en)?.toLocaleString('es') || s.creado_en;
-        const fechaExpira  = parseDbDate(s.expira_en)?.toLocaleString('es') || s.expira_en;
-        const actualBadge  = s.es_actual ? '<span class="sesion-actual-badge">Esta sesión</span>' : '';
-        return `
-          <div class="sesion-item ${s.es_actual ? 'sesion-actual' : ''}">
-            <div class="sesion-info">
-              <div class="sesion-id">${escapeHtml(s.id_corto)}… ${actualBadge}</div>
-              <div class="sesion-meta">IP: ${escapeHtml(s.ip)} · Inicio: ${fechaCreado} · Expira: ${fechaExpira}</div>
-            </div>
-            <button type="button" class="btn-cerrar-sesion"
-              data-jti="${escapeHtml(s.jti)}" ${s.es_actual ? 'disabled title="Usa Cerrar sesión para salir"' : ''}>
-              Cerrar
-            </button>
-          </div>`;
-      }).join('');
-    })
-    .catch(() => {});
 }
 
 function loadRutinas() {
@@ -299,26 +242,6 @@ function loadRutinas() {
     .catch(() => {});
 }
 
-function agregarHabito(idRutina, nombre, frecuencia) {
-  if (!nombre.trim()) return;
-  apiFetch(`${API_BASE}/habitos.php`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id_rutina: idRutina, nombre: nombre.trim(), frecuencia }),
-  })
-    .then(r => r.json())
-    .then(data => { if (data.ok) loadRutinas(); })
-    .catch(() => {});
-}
-
-function eliminarHabito(idHabito) {
-  if (!confirm('¿Eliminar este hábito?')) return;
-  apiFetch(`${API_BASE}/habitos.php?id_habito=${idHabito}`, { method: 'DELETE' })
-    .then(r => r.json())
-    .then(data => { if (data.ok) loadRutinas(); })
-    .catch(() => {});
-}
-
 function cambiarEstadoRutina(idRutina, nuevoEstado) {
   apiFetch(`${API_BASE}/rutinas.php`, {
     method: 'PUT',
@@ -338,78 +261,35 @@ function eliminarRutina(idRutina) {
     .catch(() => {});
 }
 
-let historialDias = 7;
-let graficaChart  = null;
-
 function loadHistorial() {
-  const hasta  = new Date();
-  const desde  = new Date();
-  desde.setDate(desde.getDate() - (historialDias - 1));
+  const hasta = new Date();
+  const desde = new Date();
+  desde.setDate(desde.getDate() - 7);
   const desdeStr = toLocalDateTimeStr(desde).slice(0, 10);
   const hastaStr = toLocalDateTimeStr(hasta).slice(0, 10);
 
   apiFetch(`${API_BASE}/cumplimiento.php?desde=${desdeStr}&hasta=${hastaStr}`)
     .then(res => res.json())
     .then(data => {
-      const tbody        = document.getElementById('cuerpo-historial');
-      const tabla        = document.getElementById('tabla-historial');
-      const vacio        = document.getElementById('historial-vacio');
-      const graficaVacia = document.getElementById('grafica-vacia');
-      const canvas       = document.getElementById('grafica-historial');
+      const tbody = document.getElementById('cuerpo-historial');
+      const tabla = document.getElementById('tabla-historial');
+      const vacio = document.getElementById('historial-vacio');
       if (!tbody) return;
-
       tbody.innerHTML = '';
-      const cumplimiento = (data.ok && data.cumplimiento) ? data.cumplimiento : [];
-
-      // ── Gráfica de barras ──────────────────────────────
-      if (canvas) {
-        // Construir rango de fechas completo
-        const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-        const rango = [];
-        for (let i = historialDias - 1; i >= 0; i--) {
-          const d = new Date();
-          d.setDate(d.getDate() - i);
-          rango.push(toLocalDateTimeStr(d).slice(0, 10));
-        }
-
-        // Agrupar por fecha: total y completados
-        const porFecha = {};
-        rango.forEach(f => { porFecha[f] = { total: 0, completados: 0 }; });
-        cumplimiento.forEach(r => {
-          if (porFecha[r.fecha]) {
-            porFecha[r.fecha].total++;
-            if (r.completado) porFecha[r.fecha].completados++;
-          }
-        });
-
-        const labels   = rango.map(f => dias[new Date(f + 'T12:00:00').getDay()] + ' ' + f.slice(8));
-        const totales  = rango.map(f => porFecha[f].total);
-        const hechos   = rango.map(f => porFecha[f].completados);
-        const hayDatos = totales.some(v => v > 0);
-
-        if (graficaVacia) graficaVacia.style.display = hayDatos ? 'none' : 'block';
-        canvas.style.display = hayDatos ? 'block' : 'none';
-
-        if (hayDatos) {
-          if (graficaChart) graficaChart.destroy();
-          graficaChart = dibujarGrafica(canvas, labels, totales, hechos);
-        }
-      }
-
-      // ── Tabla de detalle ───────────────────────────────
-      if (cumplimiento.length === 0) {
+      if (!data.ok || !data.cumplimiento || data.cumplimiento.length === 0) {
         if (tabla) tabla.style.display = 'none';
-        if (vacio) vacio.style.display = 'block';
+        if (vacio) { vacio.style.display = 'block'; vacio.textContent = 'No hay registros en este período.'; }
         return;
       }
       if (tabla) tabla.style.display = '';
       if (vacio) vacio.style.display = 'none';
-      const diasNombre = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-      cumplimiento.forEach(row => {
-        const tr = document.createElement('tr');
+      const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      data.cumplimiento.forEach(row => {
+        const tr      = document.createElement('tr');
+        const dayName = dias[new Date(row.fecha + 'T12:00:00').getDay()];
         tr.innerHTML = `
           <td>${escapeHtml(row.fecha)}</td>
-          <td>${escapeHtml(diasNombre[new Date(row.fecha + 'T12:00:00').getDay()])}</td>
+          <td>${escapeHtml(dayName)}</td>
           <td>${escapeHtml(row.nombre_rutina || '—')}</td>
           <td>${escapeHtml(row.nombre_habito || '—')}</td>
           <td><span class="badge ${row.completado ? 'badge-ok' : 'badge-no'}">${row.completado ? 'Sí' : 'No'}</span></td>
@@ -418,90 +298,6 @@ function loadHistorial() {
       });
     })
     .catch(() => {});
-}
-
-function dibujarGrafica(canvas, labels, totales, hechos) {
-  const ctx  = canvas.getContext('2d');
-  const W    = canvas.offsetWidth  || 400;
-  const H    = canvas.offsetHeight || 180;
-  canvas.width  = W;
-  canvas.height = H;
-
-  const padL = 28, padR = 12, padT = 16, padB = 40;
-  const areaW = W - padL - padR;
-  const areaH = H - padT - padB;
-  const n     = labels.length;
-  const maxV  = Math.max(...totales, 1);
-  const barW  = (areaW / n) * 0.55;
-  const gap   = areaW / n;
-
-  ctx.clearRect(0, 0, W, H);
-
-  // Líneas de guía
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth   = 1;
-  for (let i = 0; i <= 4; i++) {
-    const y = padT + areaH - (i / 4) * areaH;
-    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
-  }
-
-  // Barras
-  labels.forEach((lbl, i) => {
-    const x      = padL + gap * i + (gap - barW) / 2;
-    const hTotal = totales[i] > 0 ? (totales[i] / maxV) * areaH : 0;
-    const hHecho = hechos[i]  > 0 ? (hechos[i]  / maxV) * areaH : 0;
-
-    // Barra fondo (total)
-    if (hTotal > 0) {
-      ctx.fillStyle = '#e2e8f0';
-      roundRect(ctx, x, padT + areaH - hTotal, barW, hTotal, 4);
-      ctx.fill();
-    }
-    // Barra completados
-    if (hHecho > 0) {
-      ctx.fillStyle = '#0d9488';
-      roundRect(ctx, x, padT + areaH - hHecho, barW, hHecho, 4);
-      ctx.fill();
-    }
-
-    // Etiqueta eje X
-    ctx.fillStyle    = '#94a3b8';
-    ctx.font         = `${Math.max(9, Math.floor(areaW / n / 2.8))}px system-ui,sans-serif`;
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(lbl, x + barW / 2, padT + areaH + 6);
-
-    // Número encima de la barra completados
-    if (hechos[i] > 0) {
-      ctx.fillStyle    = '#0f766e';
-      ctx.font         = `bold ${Math.max(9, Math.floor(areaW / n / 2.8))}px system-ui,sans-serif`;
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(hechos[i], x + barW / 2, padT + areaH - hHecho - 2);
-    }
-  });
-
-  // Leyenda
-  const ly = H - 10;
-  ctx.fillStyle = '#0d9488'; ctx.fillRect(padL, ly - 8, 10, 8);
-  ctx.fillStyle = '#94a3b8'; ctx.font = '10px system-ui,sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-  ctx.fillText('Completados', padL + 14, ly);
-  ctx.fillStyle = '#e2e8f0'; ctx.fillRect(padL + 100, ly - 8, 10, 8);
-  ctx.fillStyle = '#94a3b8'; ctx.fillText('Total', padL + 114, ly);
-
-  return { destroy: () => ctx.clearRect(0, 0, W, H) };
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  r = Math.min(r, h / 2, w / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h);
-  ctx.lineTo(x, y + h);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }
 
 function loadAvisos() {
@@ -651,68 +447,8 @@ function bindViewEvents(viewName) {
       case 'usuario':
         const btnLogout = document.getElementById('btn-logout');
         if (btnLogout) btnLogout.addEventListener('click', () => { window.location.href = 'php/logout.php'; });
-
         const btnPrefs = document.getElementById('btn-guardar-prefs');
         if (btnPrefs) btnPrefs.addEventListener('click', guardarPrefsUsuario);
-
-        // Cargar sesiones activas
-        loadSesiones();
-
-        // Cerrar sesión individual
-        const listaSesiones = document.getElementById('lista-sesiones');
-        if (listaSesiones) {
-          listaSesiones.addEventListener('click', e => {
-            const btn = e.target.closest('.btn-cerrar-sesion');
-            if (!btn || btn.disabled) return;
-            const jti = btn.dataset.jti;
-            if (!confirm('¿Cerrar esta sesión?')) return;
-            apiFetch(`${API_BASE}/sesiones.php?jti=${encodeURIComponent(jti)}`, { method: 'DELETE' })
-              .then(r => r.json())
-              .then(data => { if (data.ok) loadSesiones(); })
-              .catch(() => {});
-          });
-        }
-
-        // Cerrar todas las sesiones
-        const btnCerrarTodas = document.getElementById('btn-cerrar-todas');
-        if (btnCerrarTodas) {
-          btnCerrarTodas.addEventListener('click', () => {
-            if (!confirm('¿Cerrar TODAS las sesiones activas? Tendrás que volver a iniciar sesión.')) return;
-            apiFetch(`${API_BASE}/sesiones.php?todas=1`, { method: 'DELETE' })
-              .then(r => r.json())
-              .then(data => { if (data.ok) window.location.href = 'login.html'; })
-              .catch(() => {});
-          });
-        }
-
-        const btnEditarPerfil  = document.getElementById('btn-editar-perfil');
-        const btnCancelarPerfil = document.getElementById('btn-cancelar-perfil');
-        const btnGuardarPerfil  = document.getElementById('btn-guardar-perfil');
-        const cardEditar        = document.getElementById('card-editar-perfil');
-
-        if (btnEditarPerfil) {
-          btnEditarPerfil.addEventListener('click', () => {
-            // Pre-rellenar con valores actuales
-            document.getElementById('edit-nombre').value = document.getElementById('perfil-nombre').textContent.trim();
-            document.getElementById('edit-correo').value = document.getElementById('perfil-email').textContent.trim();
-            document.getElementById('edit-password-actual').value    = '';
-            document.getElementById('edit-password-nueva').value     = '';
-            document.getElementById('edit-password-confirmar').value = '';
-            document.getElementById('perfil-error').style.display = 'none';
-            document.getElementById('perfil-exito').style.display = 'none';
-            cardEditar.style.display = '';
-            btnEditarPerfil.style.display = 'none';
-          });
-        }
-        if (btnCancelarPerfil) {
-          btnCancelarPerfil.addEventListener('click', () => {
-            cardEditar.style.display = 'none';
-            btnEditarPerfil.style.display = '';
-          });
-        }
-        if (btnGuardarPerfil) {
-          btnGuardarPerfil.addEventListener('click', guardarPerfil);
-        }
         break;
 
       case 'rutinas':
@@ -737,43 +473,13 @@ function bindViewEvents(viewName) {
         const listaRutinas = document.getElementById('lista-rutinas');
         if (listaRutinas) {
           listaRutinas.addEventListener('click', e => {
-            // Acciones de rutina (pausar, activar, eliminar)
-            const btnAccion = e.target.closest('[data-action]');
-            if (btnAccion) {
-              const id     = parseInt(btnAccion.dataset.id, 10);
-              const action = btnAccion.dataset.action;
-              if (action === 'pausar')   cambiarEstadoRutina(id, 'pausada');
-              if (action === 'activar')  cambiarEstadoRutina(id, 'activa');
-              if (action === 'eliminar') eliminarRutina(id);
-              return;
-            }
-            // Eliminar hábito individual
-            const btnElimHabito = e.target.closest('.btn-eliminar-habito');
-            if (btnElimHabito) {
-              eliminarHabito(parseInt(btnElimHabito.dataset.idHabito, 10));
-              return;
-            }
-            // Agregar hábito
-            const btnAgregar = e.target.closest('.btn-agregar-habito');
-            if (btnAgregar) {
-              const idRutina = parseInt(btnAgregar.dataset.idRutina, 10);
-              const card     = btnAgregar.closest('.rutina-card');
-              const input    = card.querySelector('.input-nuevo-habito');
-              const select   = card.querySelector('.select-frecuencia-habito');
-              agregarHabito(idRutina, input.value, select.value);
-              return;
-            }
-          });
-
-          // Enter en el input también agrega el hábito
-          listaRutinas.addEventListener('keydown', e => {
-            if (e.key !== 'Enter') return;
-            const input = e.target.closest('.input-nuevo-habito');
-            if (!input) return;
-            const idRutina = parseInt(input.dataset.idRutina, 10);
-            const card     = input.closest('.rutina-card');
-            const select   = card.querySelector('.select-frecuencia-habito');
-            agregarHabito(idRutina, input.value, select.value);
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            const id     = parseInt(btn.dataset.id, 10);
+            const action = btn.dataset.action;
+            if (action === 'pausar')   cambiarEstadoRutina(id, 'pausada');
+            if (action === 'activar')  cambiarEstadoRutina(id, 'activa');
+            if (action === 'eliminar') eliminarRutina(id);
           });
         }
 
@@ -799,14 +505,6 @@ function bindViewEvents(viewName) {
         break;
 
       case 'historial':
-        document.querySelectorAll('.btn-rango').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.btn-rango').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            historialDias = parseInt(btn.dataset.dias, 10);
-            loadHistorial();
-          });
-        });
         break;
 
       case 'avisos':
@@ -824,79 +522,31 @@ function bindViewEvents(viewName) {
 }
 
 function guardarPrefsUsuario() {
+  const chk  = document.getElementById('pref-notificaciones');
   const sel  = document.getElementById('pref-tema');
+  const notificaciones = chk ? chk.checked : true;
   const tema = sel ? sel.value : 'claro';
   apiFetch(`${API_BASE}/configuracion.php`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tema }),
+    body: JSON.stringify({ notificaciones, tema }),
   })
     .then(res => res.json())
-    .then(data => {
-      if (data.ok) {
-        applyTema(tema);
-        const fb = document.getElementById('prefs-feedback');
-        if (fb) { fb.style.display = 'block'; setTimeout(() => fb.style.display = 'none', 3000); }
-      }
-    })
+    .then(data => { if (data.ok) { applyTema(tema); alert('Preferencias guardadas.'); } })
     .catch(() => {});
 }
 
 function guardarConfiguracion() {
+  const chk  = document.getElementById('config-notificaciones');
   const sel  = document.getElementById('config-tema');
+  const notificaciones = chk ? chk.checked : true;
   const tema = sel ? sel.value : 'claro';
   apiFetch(`${API_BASE}/configuracion.php`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tema }),
+    body: JSON.stringify({ notificaciones, tema }),
   })
     .then(res => res.json())
-    .then(data => {
-      if (data.ok) {
-        applyTema(tema);
-        const fb = document.getElementById('config-feedback');
-        if (fb) { fb.style.display = 'block'; setTimeout(() => fb.style.display = 'none', 3000); }
-      }
-    })
+    .then(data => { if (data.ok) { applyTema(tema); alert('Configuración guardada.'); } })
     .catch(() => {});
-}
-
-function guardarPerfil() {
-  const nombre   = document.getElementById('edit-nombre')?.value.trim() || '';
-  const correo   = document.getElementById('edit-correo')?.value.trim() || '';
-  const pwActual = document.getElementById('edit-password-actual')?.value || '';
-  const pwNueva  = document.getElementById('edit-password-nueva')?.value || '';
-  const pwConf   = document.getElementById('edit-password-confirmar')?.value || '';
-  const errEl    = document.getElementById('perfil-error');
-  const okEl     = document.getElementById('perfil-exito');
-
-  const mostrarError = msg => { if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; } if (okEl) okEl.style.display = 'none'; };
-
-  if (!nombre || !correo) return mostrarError('Nombre y correo son obligatorios.');
-  if (pwNueva && pwNueva !== pwConf) return mostrarError('Las contraseñas nuevas no coinciden.');
-  if (pwNueva && pwNueva.length < 8)  return mostrarError('La contraseña debe tener al menos 8 caracteres.');
-
-  const body = { nombre, correo };
-  if (pwNueva) { body.password_actual = pwActual; body.password_nueva = pwNueva; }
-
-  apiFetch(`${API_BASE}/usuario.php`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-    .then(r => r.json())
-    .then(data => {
-      if (!data.ok) return mostrarError(data.error || 'No se pudo guardar.');
-      // Actualizar vista de perfil
-      const elN = document.getElementById('perfil-nombre');
-      const elE = document.getElementById('perfil-email');
-      if (elN) elN.textContent = nombre;
-      if (elE) elE.textContent = correo;
-      if (errEl) errEl.style.display = 'none';
-      if (okEl)  { okEl.textContent = '✓ Perfil actualizado correctamente.'; okEl.style.display = 'block'; }
-      // Limpiar campos de contraseña
-      document.getElementById('edit-password-actual').value    = '';
-      document.getElementById('edit-password-nueva').value     = '';
-      document.getElementById('edit-password-confirmar').value = '';
-    })
-    .catch(() => mostrarError('Error de conexión.'));
 }
 
 function marcarHabito(idHabito) {

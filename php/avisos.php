@@ -58,25 +58,5 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     exit;
 }
 
-// ── DELETE: eliminar un aviso específico ──────────────
-if ($_SERVER["REQUEST_METHOD"] === "DELETE") {
-    $id_aviso = (int) ($_GET["id"] ?? 0);
-    if ($id_aviso < 1) {
-        http_response_code(400);
-        echo json_encode(["ok" => false, "error" => "id obligatorio"]);
-        exit;
-    }
-    try {
-        $pdo = GetDataBaseConn();
-        $pdo->prepare("DELETE FROM avisos WHERE id_aviso = ? AND id_usuario = ?")
-            ->execute([$id_aviso, $id_usuario]);
-        echo json_encode(["ok" => true]);
-    } catch (PDOException $e) {
-        http_response_code(500);
-        echo json_encode(["ok" => false, "error" => "Error del servidor"]);
-    }
-    exit;
-}
-
 http_response_code(405);
 echo json_encode(["ok" => false, "error" => "Método no permitido"]);

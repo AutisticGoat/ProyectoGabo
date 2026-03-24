@@ -1,0 +1,38 @@
+<section class="card">
+    <h2>Avisos</h2>
+    <div id="lista-avisos"></div>
+</section>
+
+<section class="card card-temporizador">
+    <h2>Recordatorio con cuenta regresiva</h2>
+    <p class="subtitle">El temporizador sigue activo aunque cambies de sección.</p>
+
+    <!-- Formulario de configuración -->
+    <div id="timer-setup-avisos">
+        <form id="form-temporizador" class="form-temporizador" novalidate>
+            <label>Mensaje
+                <input type="text" id="aviso-mensaje" placeholder="Ej: Revisar el correo" required>
+            </label>
+            <label>Duración (minutos)
+                <input type="number" id="aviso-minutos" min="1" max="1440" value="5" placeholder="5">
+            </label>
+            <button type="submit">Iniciar temporizador</button>
+        </form>
+    </div>
+
+    <!-- Cuenta regresiva activa -->
+    <div id="timer-display-avisos" class="timer-display" style="display:none;">
+        <div class="timer-ring-wrap">
+            <svg class="timer-ring" viewBox="0 0 80 80">
+                <circle class="timer-ring__track" cx="40" cy="40" r="34"/>
+                <circle class="timer-ring__fill" id="timer-ring-fill-avisos" cx="40" cy="40" r="34"/>
+            </svg>
+            <span class="timer-digits" id="timer-digits-avisos">--:--</span>
+        </div>
+        <p class="timer-label" id="timer-label-avisos"></p>
+        <div class="timer-actions">
+            <button type="button" id="btn-timer-pause-avisos">Pausar</button>
+            <button type="button" id="btn-timer-cancel-avisos" class="btn-timer-cancel">Cancelar</button>
+        </div>
+    </div>
+</section>

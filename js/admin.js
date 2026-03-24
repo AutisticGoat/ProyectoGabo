@@ -86,7 +86,6 @@ function set(id, val) {
 // USUARIOS
 // ══════════════════════════════════════════════════
 let todosLosUsuarios = [];
-let rolesDisponibles = []; // catálogo de roles del servidor
 
 function loadUsuarios(filtro = "") {
     apiFetch(`${API}/admin.php`)
@@ -122,31 +121,36 @@ function renderUsuarios(filtro = "") {
             ? `<span class="badge badge-activo">Activo</span>`
             : `<span class="badge badge-inactivo">Inactivo</span>`;
 
-        // Badge de rol con color por nivel jerárquico
-        const coloresRol = { 1: "badge-superadmin", 2: "badge-admin", 3: "badge-editor", 4: "badge-usuario" };
-        const rolBadge = `<span class="badge ${coloresRol[u.nivel_rol] || 'badge-usuario'}">${esc(u.nombre_rol)}</span>`;
+        const rolBadge = u.rol === "administrador"
+            ? `<span class="badge badge-admin">Admin</span>`
+            : `<span class="badge badge-usuario">Usuario</span>`;
 
         const fecha = u.fecha_creacion
             ? new Date(u.fecha_creacion).toLocaleDateString("es")
             : "—";
 
+        // Botones de acción
         const btnEstado = u.estado === "activo"
             ? `<button class="btn-sm btn-warning"
                        data-action="estado" data-id="${u.id_usuario}" data-valor="inactivo"
-                       title="Desactivar">Desactivar</button>`
-            : `<button class="btn-sm btn-neutral"
+                       title="Desactivar cuenta">Desactivar</button>`
+            : `<button class="btn-sm"
                        data-action="estado" data-id="${u.id_usuario}" data-valor="activo"
-                       title="Activar">Activar</button>`;
+                       title="Activar cuenta">Activar</button>`;
 
-        // Selector de rol dinámico con los roles que el admin puede asignar
-        const opcionesRol = rolesDisponibles.map(r =>
-            `<option value="${r.id_rol}" ${r.id_rol == u.id_rol ? "selected" : ""}>${esc(r.nombre)}</option>`
-        ).join("");
-        const selectRol = `<select class="select-rol-usuario" data-action="rol" data-id="${u.id_usuario}">${opcionesRol}</select>`;
+        const btnRol = u.rol === "administrador"
+            ? `<button class="btn-sm btn-neutral"
+                       data-action="rol" data-id="${u.id_usuario}" data-valor="usuario"
+                       title="Quitar rol admin">Quitar admin</button>`
+            : `<button class="btn-sm"
+                       data-action="rol" data-id="${u.id_usuario}" data-valor="administrador"
+                       title="Hacer administrador">Hacer admin</button>`;
 
-        const btnEliminar = `<button class="btn-sm btn-danger"
+        const btnEliminar = u.rol !== "administrador"
+            ? `<button class="btn-sm btn-danger"
                        data-action="eliminar" data-id="${u.id_usuario}" data-nombre="${esc(u.nombre)}"
-                       title="Eliminar cuenta">Eliminar</button>`;
+                       title="Eliminar cuenta">Eliminar</button>`
+            : "";
 
         return `
             <tr>
@@ -155,9 +159,8 @@ function renderUsuarios(filtro = "") {
                 <td>${esc(u.correo)}</td>
                 <td>${estadoBadge}</td>
                 <td>${rolBadge}</td>
-                <td>${selectRol}</td>
                 <td>${esc(fecha)}</td>
-                <td><div class="actions">${btnEstado}${btnEliminar}</div></td>
+                <td><div class="actions">${btnEstado}${btnRol}${btnEliminar}</div></td>
             </tr>`;
     }).join("");
 }
@@ -192,32 +195,20 @@ function bindUsuariosEvents() {
     if (tbody) {
         tbody.addEventListener("click", e => {
             const btn = e.target.closest("[data-action]");
-            if (!btn || btn.tagName === "SELECT") return;
+            if (!btn) return;
 
             const { action, id, valor, nombre } = btn.dataset;
 
             if (action === "estado") {
                 cambiarCampo(parseInt(id), { estado: valor });
             }
+            if (action === "rol") {
+                cambiarCampo(parseInt(id), { rol: valor });
+            }
             if (action === "eliminar") {
                 if (confirm(`¿Eliminar la cuenta de "${nombre}"? Esta acción no se puede deshacer.`)) {
                     eliminarUsuario(parseInt(id));
                 }
-            }
-        });
-
-        // Cambio de rol mediante el select
-        tbody.addEventListener("change", e => {
-            const sel = e.target.closest(".select-rol-usuario");
-            if (!sel) return;
-            const id_usuario = parseInt(sel.dataset.id, 10);
-            const id_rol     = parseInt(sel.value, 10);
-            const rolNombre  = rolesDisponibles.find(r => r.id_rol == id_rol)?.nombre || "";
-            if (confirm(`¿Cambiar el rol de este usuario a "${rolNombre}"? Se cerrarán todas sus sesiones activas.`)) {
-                cambiarCampo(id_usuario, { id_rol });
-            } else {
-                // Revertir el select visualmente
-                loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
             }
         });
     }
@@ -232,11 +223,11 @@ function cambiarCampo(id_usuario, payload) {
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                showToast(data.aviso || "Cambio guardado correctamente.", "ok");
+                const msg = data.aviso || "Cambio guardado correctamente.";
+                showToast(msg, "ok");
                 loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
             } else {
                 showToast(data.error || "Error al guardar.", "error");
-                loadUsuarios(document.getElementById("buscar-usuario")?.value ?? "");
             }
         })
         .catch(err => showToast(err.message || "Error de conexión.", "error"));
